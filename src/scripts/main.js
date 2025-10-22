@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // SORT & ACTIVE ROW
+  // Sort & Active Row
   const sortDirections = {};
   let lastSortedIndex = null;
 
@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ative row
+  // active row
   table.addEventListener('click', (e) => {
     const row = e.target.closest('tbody tr');
 
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     row.classList.add('active');
   });
 
-  // NOTIFICATION
+  // Notification
   function showNotification(type, title, description) {
     document.querySelectorAll('.notification').forEach((n) => n.remove());
 
@@ -79,12 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
       <span class="title">${title}</span>
       <p>${description}</p>
     `;
-
     document.body.append(notif);
     setTimeout(() => notif.remove(), 3000);
   }
 
-  // FORM
+  // Form
   function createForm() {
     const body = document.querySelector('body');
     const newForm = document.createElement('form');
@@ -187,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     body.append(newForm);
 
-    // SUBMIT
+    // Submit
     newForm.addEventListener('submit', (e) => {
       e.preventDefault();
 
@@ -209,9 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const ageValue = Number(ageRaw);
-      const salaryValue = Number(salaryRaw);
-
+      // Name validation
       const lettersCount = nameValue.replace(/[^A-Za-z]/g, '').length;
 
       if (lettersCount < 4) {
@@ -219,6 +216,32 @@ document.addEventListener('DOMContentLoaded', () => {
           'error',
           'Invalid Name',
           'Name must contain at least 4 letters.',
+        );
+
+        return;
+      }
+
+      const positionLetters = positionValue.replace(/[^A-Za-z]/g, '').length;
+
+      if (positionLetters < 4) {
+        showNotification(
+          'error',
+          'Invalid Position',
+          'Position must contain at least 4 letters.',
+        );
+
+        return;
+      }
+
+      const ageValue = Number(ageRaw);
+      const salaryValue = Number(salaryRaw);
+
+      // ✅ new: NaN guard
+      if (!Number.isFinite(ageValue) || !Number.isFinite(salaryValue)) {
+        showNotification(
+          'error',
+          'Invalid Number',
+          'Age and Salary must be valid numbers.',
         );
 
         return;
@@ -234,7 +257,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // add new row
       const tbody = document.querySelector('table tbody');
       const newRow = document.createElement('tr');
 
@@ -247,19 +269,42 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       tbody.append(newRow);
 
+      if (lastSortedIndex !== null) {
+        const direction = sortDirections[lastSortedIndex];
+        const rows = Array.from(tbody.rows);
+
+        rows.sort((a, b) => {
+          const valA = a.cells[lastSortedIndex].textContent.trim();
+          const valB = b.cells[lastSortedIndex].textContent.trim();
+          const numA = parseFloat(valA.replace(/[^\d.-]/g, ''));
+          const numB = parseFloat(valB.replace(/[^\d.-]/g, ''));
+
+          if (!isNaN(numA) && !isNaN(numB)) {
+            return numA - numB;
+          }
+
+          return valA.localeCompare(valB, undefined, { sensitivity: 'base' });
+        });
+
+        if (direction === 'desc') {
+          rows.reverse();
+        }
+        tbody.append(...rows);
+      }
+
       newForm.reset();
 
       showNotification(
         'success',
         'Employee Added',
-        `${nameValue} was successfully added.`,
+        `${nameValue} was successfully added to the table.`,
       );
     });
   }
 
   createForm();
 
-  // INLINE EDIT
+  // Inline edit
   table.addEventListener('dblclick', (e) => {
     const cell = e.target.closest('td');
 
@@ -283,17 +328,13 @@ document.addEventListener('DOMContentLoaded', () => {
     input.type = 'text';
     input.classList.add('cell-input');
 
-    if (cell.cellIndex === 4) {
-      input.value = oldValue.replace(/[^0-9.,-]/g, '');
-    } else {
-      input.value = oldValue;
-    }
+    input.value =
+      cell.cellIndex === 4 ? oldValue.replace(/[^0-9.,-]/g, '') : oldValue;
 
     cell.textContent = '';
     cell.append(input);
     input.focus();
 
-    // спільна функція збереження
     function saveValue() {
       const newValue = input.value.trim();
 
