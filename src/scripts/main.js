@@ -7,8 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     return;
   }
 
-  // Sort & Active Row
+  // SORT & ACTIVE ROW
   const sortDirections = {};
+  let lastSortedIndex = null;
 
   table.querySelectorAll('th').forEach((th) => {
     th.addEventListener('click', (e) => {
@@ -20,9 +21,16 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       const rows = Array.from(tbody.rows);
-      const direction = sortDirections[index] === 'asc' ? 'desc' : 'asc';
+      let direction;
+
+      if (lastSortedIndex !== index) {
+        direction = 'asc';
+      } else {
+        direction = sortDirections[index] === 'asc' ? 'desc' : 'asc';
+      }
 
       sortDirections[index] = direction;
+      lastSortedIndex = index;
 
       rows.sort((a, b) => {
         const valA = a.cells[index].textContent.trim();
@@ -34,7 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return numA - numB;
         }
 
-        return valA.localeCompare(valB);
+        return valA.localeCompare(valB, undefined, { sensitivity: 'base' });
       });
 
       if (direction === 'desc') {
@@ -44,6 +52,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // ative row
   table.addEventListener('click', (e) => {
     const row = e.target.closest('tbody tr');
 
@@ -57,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
     row.classList.add('active');
   });
 
-  // Notification helper
+  // NOTIFICATION
   function showNotification(type, title, description) {
     document.querySelectorAll('.notification').forEach((n) => n.remove());
 
@@ -72,11 +81,10 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
 
     document.body.append(notif);
-
     setTimeout(() => notif.remove(), 3000);
   }
 
-  // Form
+  // FORM
   function createForm() {
     const body = document.querySelector('body');
     const newForm = document.createElement('form');
@@ -179,22 +187,38 @@ document.addEventListener('DOMContentLoaded', () => {
     );
     body.append(newForm);
 
-    // Form submission
+    // SUBMIT
     newForm.addEventListener('submit', (e) => {
       e.preventDefault();
 
       const nameValue = inputName.value.trim();
       const positionValue = inputPosition.value.trim();
       const officeValue = selectOffice.value;
-      const ageValue = Number(inputAge.value);
-      const salaryValue = Number(inputSalary.value);
+      const ageRaw = inputAge.value;
+      const salaryRaw = inputSalary.value;
 
-      // Validation
-      if (nameValue.length < 4) {
+      if (
+        !nameValue ||
+        !positionValue ||
+        !officeValue ||
+        ageRaw === '' ||
+        salaryRaw === ''
+      ) {
+        showNotification('error', 'Missing Data', 'All fields are required.');
+
+        return;
+      }
+
+      const ageValue = Number(ageRaw);
+      const salaryValue = Number(salaryRaw);
+
+      const lettersCount = nameValue.replace(/[^A-Za-z]/g, '').length;
+
+      if (lettersCount < 4) {
         showNotification(
           'error',
           'Invalid Name',
-          'The name must contain at least 4 letters.',
+          'Name must contain at least 4 letters.',
         );
 
         return;
@@ -210,7 +234,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Add new row
+      // add new row
       const tbody = document.querySelector('table tbody');
       const newRow = document.createElement('tr');
 
@@ -223,20 +247,19 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       tbody.append(newRow);
 
-      // Reset form + show success
       newForm.reset();
 
       showNotification(
         'success',
         'Employee Added',
-        `${nameValue} was successfully added to the table.`,
+        `${nameValue} was successfully added.`,
       );
     });
   }
 
   createForm();
 
-  // edit with double-click
+  // INLINE EDIT
   table.addEventListener('dblclick', (e) => {
     const cell = e.target.closest('td');
 
@@ -259,12 +282,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     input.type = 'text';
     input.classList.add('cell-input');
-    input.value = oldValue.replace(/[^0-9.,-]/g, '');
+
+    if (cell.cellIndex === 4) {
+      input.value = oldValue.replace(/[^0-9.,-]/g, '');
+    } else {
+      input.value = oldValue;
+    }
 
     cell.textContent = '';
     cell.append(input);
     input.focus();
 
+    // спільна функція збереження
     function saveValue() {
       const newValue = input.value.trim();
 
@@ -285,7 +314,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     input.addEventListener('blur', saveValue);
 
-    input.addEventListener('keypress', (ev) => {
+    input.addEventListener('keydown', (ev) => {
       if (ev.key === 'Enter') {
         saveValue();
       }
